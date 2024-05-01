@@ -1,0 +1,88 @@
+<html>
+    <body>
+        <p>report id: <span id='timestamp'></span></p>
+        <!-- <p>http code: <span id='http_code'></span></p> -->
+        <p>dns resolve time: <span id='dns_time'></span> ms</p>
+        <p>tcp connect time: <span id='tcp_connect_time'></span> ms</p>
+        <p>http request time: <span id='http_request_time'></span> ms</p>
+        <p>total duration: <span id='duration'></span> ms</p>
+        <p>Submit Result: <span id='submit'></span></p>
+
+        <script>
+            report_id = Date.now()
+            document.getElementById('timestamp').innerHTML = report_id;
+            const controller = new AbortController();
+            const signal = controller.signal;
+            // const url = 'https://clientdata-01-e7jflwxriq-as.a.run.app/submit';
+            const url = '/submit';
+            
+            function getDomain(urlString) {
+                const url = new URL(urlString);
+                return url.hostname;
+            }
+
+            function perfObserver(list, observer) {
+
+                // 客户端访问的性能数据
+                entry = list.getEntries()[0]
+                console.log(entry)
+                var client_data = {}
+                client_data = JSON.parse(JSON.stringify(entry))
+                var dns_time = (entry.domainLookupEnd - entry.domainLookupStart).toFixed(1);
+                var tcp_connect_time = (entry.connectEnd - entry.connectStart).toFixed(1);
+                var request_time = (entry.responseEnd - entry.requestStart).toFixed(1);
+                // document.getElementById('http_code').innerHTML = entry.responseStatus;
+                document.getElementById('dns_time').innerHTML = dns_time;
+                document.getElementById('tcp_connect_time').innerHTML = tcp_connect_time;
+                document.getElementById('http_request_time').innerHTML = request_time;
+                document.getElementById('duration').innerHTML = (entry.duration).toFixed(1);
+                client_data['id'] = report_id;
+                datetime = new Date()
+                client_data['date_time'] = datetime
+
+                // 获取访问域名对应的IP
+                domain = getDomain(entry.name)
+                const resolve_url = "https://dns.google/resolve?name="+domain+"&type=A"
+                console.log(domain)
+                console.log(resolve_url)
+                fetch(resolve_url, {signal})
+                .then(response => response.json())
+                .then(data => {
+                    domain_ip = data['Answer'][0]['data']
+                    client_data['domain_ip'] = domain_ip;
+                    console.log(client_data)
+
+                    // 提交数据到服务端
+                    return  fetch(url, {  
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(client_data),
+                            signal })
+                        .then(response => {
+                            document.getElementById('submit').innerHTML = "Success"
+                            console.log('success')
+                        })
+                        .catch(error => {
+                            document.getElementById('submit').innerHTML = "Failed"
+                            if (error.name === 'AbortError') {
+                                console.error('timeout');
+                            } else {
+                                console.error('other error:', error);
+                            }
+                        });
+                })
+                .catch(error => {
+                    document.getElementById('submit').innerHTML = "Failed"
+                });
+
+                setTimeout(() => controller.abort(), 5000);                
+            }
+
+            const observer = new PerformanceObserver(perfObserver);
+            observer.observe({ entryTypes: ["navigation"] });
+
+        </script>
+    </body>
+</html>
