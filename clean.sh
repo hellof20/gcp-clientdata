@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+# set -e
 
 export PROJECT_ID=speedy-victory-336109
 export REGION=asia-southeast1

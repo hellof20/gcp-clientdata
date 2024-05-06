@@ -1,8 +1,9 @@
 #!/bin/bash
+# set -e
 
 export PROJECT_ID=speedy-victory-336109
 export REGION=asia-southeast1
-export IMAGE=hellof20/clientdata:2024043001
+export IMAGE=hellof20/clientdata:2024050604
 
 if [ ! $PROJECT_ID ]; then
     echo "please set PROJECT_ID"
@@ -13,6 +14,10 @@ if [ ! $REGION ]; then
     echo "please set REGION"
     exit 1
 fi
+
+echo "Enable firestore and create default database ... "
+gcloud services enable firestore.googleapis.com --project $PROJECT_ID
+gcloud firestore databases create --database=gcp-client-data-001 --location $REGION  --project $PROJECT_ID
 
 echo "Create service account for clientdata ... "
 gcloud iam service-accounts create clientdatasa \
